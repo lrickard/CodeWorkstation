@@ -27,7 +27,13 @@ class CWWindow(QMainWindow):
 	
 	def resizeEvent(self, event):
 		print("FixStuff")
-		
+
+	def mouseDoubleClickEvent(self, event):
+		print("doubleclick")
+		self.hasDiag = True
+		if not self.hasDiag:
+			self.newDiag = QDialog()
+			self.newDiag.show() # NOT WORKING
 """
 class cboxDock(QDockWidget):
 	def __init__(self, title, parent):
