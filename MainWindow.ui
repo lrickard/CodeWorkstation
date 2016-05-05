@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>826</width>
-    <height>672</height>
+    <height>670</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,41 +30,6 @@
      </layout>
     </item>
    </layout>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>826</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuFile">
-    <property name="title">
-     <string>File</string>
-    </property>
-    <addaction name="separator"/>
-    <addaction name="actionSave"/>
-    <addaction name="actionSave_As"/>
-    <addaction name="actionOpen"/>
-   </widget>
-   <widget class="QMenu" name="menuNew">
-    <property name="title">
-     <string>New</string>
-    </property>
-    <addaction name="actionButton"/>
-    <addaction name="actionCommand_Window"/>
-   </widget>
-   <widget class="QMenu" name="menuEdit">
-    <property name="title">
-     <string>Edit</string>
-    </property>
-    <addaction name="actionShortcuts"/>
-   </widget>
-   <addaction name="menuFile"/>
-   <addaction name="menuEdit"/>
-   <addaction name="menuNew"/>
   </widget>
   <widget class="QDockWidget" name="BottomDock">
    <property name="layoutDirection">
@@ -125,6 +90,52 @@
     <layout class="QVBoxLayout" name="verticalLayout_2"/>
    </widget>
   </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>826</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSave_As"/>
+    <addaction name="actionOpen"/>
+   </widget>
+   <widget class="QMenu" name="menuNew">
+    <property name="title">
+     <string>New</string>
+    </property>
+    <addaction name="actionButton"/>
+    <addaction name="actionCommand_Window"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionShortcuts"/>
+   </widget>
+   <widget class="QMenu" name="menuEditor">
+    <property name="title">
+     <string>Editor</string>
+    </property>
+    <addaction name="actionBoL"/>
+    <addaction name="actionEoL"/>
+    <addaction name="actionDL"/>
+    <addaction name="actionBoF"/>
+    <addaction name="actionEoF"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuNew"/>
+   <addaction name="menuEditor"/>
+  </widget>
   <action name="actionSave">
    <property name="text">
     <string>Save</string>
@@ -153,6 +164,61 @@
   <action name="actionOpen">
    <property name="text">
     <string>Open</string>
+   </property>
+  </action>
+  <action name="actionBeginning_of_Line">
+   <property name="text">
+    <string>Beginning of Line</string>
+   </property>
+  </action>
+  <action name="actionEnd_of_Line">
+   <property name="text">
+    <string>End of Line</string>
+   </property>
+  </action>
+  <action name="actionDelete_Line">
+   <property name="text">
+    <string>Delete Line</string>
+   </property>
+  </action>
+  <action name="actionBeginning_of_File">
+   <property name="text">
+    <string>Beginning of File</string>
+   </property>
+  </action>
+  <action name="actionEnd_of_File">
+   <property name="text">
+    <string>End of File</string>
+   </property>
+  </action>
+  <action name="actionBeginning_Of_Line">
+   <property name="text">
+    <string>Beginning Of Line</string>
+   </property>
+  </action>
+  <action name="actionBoL">
+   <property name="text">
+    <string>Beginning of Line</string>
+   </property>
+  </action>
+  <action name="actionEoL">
+   <property name="text">
+    <string>End of Line</string>
+   </property>
+  </action>
+  <action name="actionDL">
+   <property name="text">
+    <string>Delete Line</string>
+   </property>
+  </action>
+  <action name="actionBoF">
+   <property name="text">
+    <string>Beginning of File</string>
+   </property>
+  </action>
+  <action name="actionEoF">
+   <property name="text">
+    <string>End of File</string>
    </property>
   </action>
  </widget>

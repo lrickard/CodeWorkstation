@@ -18,6 +18,7 @@ from MainWindowUI import Ui_MainWindow
 from ButtonDialogUI import Ui_ButtonDialog
 from CommandBoxChoiceDialogUI import Ui_CommandBoxChoiceDialog
 from ErrorDialogUI import Ui_ErrorDialog
+from ShortcutSaveDialogUI import Ui_ShortcutDialog
 
 
 # Important Global variables -------------------------------------------------
@@ -29,6 +30,7 @@ butList = []
 boxList = []
 butDict = {}
 boxDict = {}
+shortcutDict = {}
 # ----------------------------------------------------------------------------
 
 
@@ -71,6 +73,78 @@ class CWErrorDialog(QDialog): # ----------------------------------------------
 		self.ui.errorMessage.setText(errMessage)
 # END CWErrorDialog ----------------------------------------------------------
 
+class CWShortcutDialog(QDialog): # -------------------------------------------
+	def __init__(self, parent=None, name=None):
+		global shortcutDict
+		super(CWShortcutDialog, self).__init__(parent)
+		self.ui = Ui_ShortcutDialog()
+		self.ui.setupUi(self)
+		self.ui.saveShortcutButton.clicked.connect(self.saveShortcut)
+		self.ui.okayButton.clicked.connect(self.close)
+		self.ui.shortcutTable.setRowCount(len(shortcutDict.keys()))
+		for but in butList:
+			self.ui.functionDropdown.addItem(but.name)
+
+		for i, key in enumerate(shortcutDict.keys()):
+			k = QTableWidgetItem("Ctrl+ " + key)
+			fn = QTableWidgetItem(shortcutDict[key])
+			self.ui.shortcutTable.setItem(i, 0, k)
+			self.ui.shortcutTable.setItem(i, 1, fn)
+
+	def saveShortcut(self):
+		global shortcutDict, window
+		key = self.ui.keyEntry.text()
+		if key == "":
+			self.errorPopup = CWErrorDialog("Error: All fields must have appropriate values.")
+			self.errorPopup.show()
+		elif len(key) > 1:
+			self.errorPopup = CWErrorDialog("Error: Please use only one character.")
+			self.errorPopup.show()
+		elif key in shortcutDict.keys():
+			self.errorPopup = CWErrorDialog("This key is already being used.")
+			self.errorPopup.show()
+		else:
+			fn = self.ui.functionDropdown.currentText()
+			if fn in shortcutDict.values():
+				for k in shortcutDict.keys():
+					if fn == shortcutDict[k] and k != key:
+						del shortcutDict[k]
+						break
+			k = QTableWidgetItem("Ctrl + " + key)
+			f = QTableWidgetItem(fn)
+			shortcutDict[key] = fn
+			self.ui.shortcutTable.setRowCount(len(shortcutDict.keys()))
+			pos = len(shortcutDict.keys()) - 1
+			self.ui.shortcutTable.setItem(pos, 0, k)
+			self.ui.shortcutTable.setItem(pos, 1, f)
+			seq = QKeySequence("Ctrl+" + key)
+			if fn == "Save":
+				window.ui.actionSave.setShortcut(seq)
+			elif fn == "Save As":
+				window.ui.actionSave_As.setShortcut(seq)
+			elif fn == "Open":
+				window.ui.actionOpen.setShortcut(seq)
+			elif fn == "Edit Shortcuts":
+				window.ui.actionShortcuts.setShortcut(seq)
+			elif fn == "New Button":
+				window.ui.actionButton.setShortcut(seq)
+			elif fn == "New Command Box":
+				window.ui.actionCommand_Window.setShortcut(seq)
+			elif fn == "Beginning of Line":
+				window.ui.actionBoL.setShortcut(seq)
+			elif fn == "End of Line":
+				window.ui.actionEoL.setShortcut(seq)
+			elif fn == "Delete Line":
+				window.ui.actionDL.setShortcut(seq)
+			elif fn == "Beginning of File":
+				window.ui.actionBoF.setShortcut(seq)
+			elif fn == "End of File":
+				window.ui.actionEoF.setShortcut(seq)
+			else:
+				butDict[fn].buttonObj.setShortcut(seq)
+			self.ui.keyEntry.setText("")
+# END CWShortcutDialog ------------------------------------------------------
+
 
 class CWButtonDialog(QDialog): # ---------------------------------------------
 	def __init__(self, butData, parent=None, name=None):
@@ -95,7 +169,7 @@ class CWButtonDialog(QDialog): # ---------------------------------------------
 	def saveSettings(self):
 		global buttonData
 		if self.ui.nameText.text() == "" or self.ui.commandText.text() == "":
-			self.errorPopup = CWErrorDialog("Error: All feilds must have appropriate values.")
+			self.errorPopup = CWErrorDialog("Error: All fields must have appropriate values.")
 			self.errorPopup.show()
 		else:
 			self.data.name = self.ui.nameText.text()
@@ -341,10 +415,16 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.ui.setupUi(self)
 		self.ui.actionButton.triggered.connect(self.newButton)
 		self.ui.actionCommand_Window.triggered.connect(self.newCommandWindow)
+		self.ui.actionShortcuts.triggered.connect(self.newShortcut)
 		self.ui.NewButtonButton.clicked.connect(self.newButton)
 		self.ui.actionSave.triggered.connect(self.save)
 		self.ui.actionSave_As.triggered.connect(self.saveAs)
 		self.ui.actionOpen.triggered.connect(self.openFile)
+		self.ui.actionBoL.triggered.connect(self.beginningOfLine)
+		self.ui.actionEoL.triggered.connect(self.endOfLine)
+		self.ui.actionDL.triggered.connect(self.deleteLine)
+		self.ui.actionBoF.triggered.connect(self.beginningOfFile)
+		self.ui.actionEoF.triggered.connect(self.endOfFile)
 		self.newButtonDialog = None
 		self.newCommandDialog = None
 		self.updateSignal.connect(self.updateCBoxes)
@@ -366,6 +446,10 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.newCommandDialog=CWCommandBoxDialog(None)
 		self.newCommandDialog.show()
 
+	def newShortcut(self):
+		self.newShortcutDialog=CWShortcutDialog(self)
+		self.newShortcutDialog.show()
+
 	def save(self):
 		if fileToSaveTo != "":
 			text = self.ui.MainTextBox.toPlainText()
@@ -373,7 +457,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			fileSave.write(text)
 			fileSave.close()
 		else:
-			saveAs()
+			self.saveAs()
 
 	def saveAs(self):
 		global fileToSaveTo
@@ -392,6 +476,34 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.ui.MainTextBox.setText(data)
 		fileOpen.close() 
 		fileToSaveTo = filename[0]
+
+	def beginningOfLine(self):
+		cursor = self.ui.MainTextBox.textCursor()
+		cursor.movePosition(3)
+		self.ui.MainTextBox.setTextCursor(cursor)
+
+	def endOfLine(self):
+		cursor = self.ui.MainTextBox.textCursor()
+		cursor.movePosition(13)
+		self.ui.MainTextBox.setTextCursor(cursor)
+	
+	def deleteLine(self):
+		cursor = self.ui.MainTextBox.textCursor()
+		cursor.movePosition(3)
+		cursor.movePosition(13, 1)
+		cursor.removeSelectedText()
+		cursor.movePosition(12)
+		cursor.deletePreviousChar()
+	
+	def beginningOfFile(self):
+		cursor = self.ui.MainTextBox.textCursor()
+		cursor.movePosition(1)
+		self.ui.MainTextBox.setTextCursor(cursor)
+
+	def endOfFile(self):
+		cursor = self.ui.MainTextBox.textCursor()
+		cursor.movePosition(11)
+		self.ui.MainTextBox.setTextCursor(cursor)
 
 	def closeEvent(self, event):
 		global yesRun

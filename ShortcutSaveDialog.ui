@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ShortcutDialog</class>
+ <widget class="QDialog" name="ShortcutDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>275</width>
+    <height>312</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="9" column="1">
+    <widget class="QPushButton" name="okayButton">
+     <property name="text">
+      <string>Okay</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="2">
+    <widget class="QLabel" name="instructions1">
+     <property name="text">
+      <string>All keyboard shortcuts use</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="keyEntryLabel">
+     <property name="text">
+      <string>Key: </string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="QLineEdit" name="keyEntry"/>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="instructions2">
+     <property name="text">
+      <string>CTRL + key </string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0" rowspan="2" colspan="2">
+    <widget class="QTableWidget" name="shortcutTable">
+     <attribute name="horizontalHeaderCascadingSectionResizes">
+      <bool>false</bool>
+     </attribute>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string>Shortcut</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Function</string>
+      </property>
+     </column>
+    </widget>
+   </item>
+   <item row="5" column="0" colspan="2">
+    <widget class="QPushButton" name="saveShortcutButton">
+     <property name="text">
+      <string>Save Shortcut</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QComboBox" name="functionDropdown">
+     <item>
+      <property name="text">
+       <string>Save</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Save As</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Open</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Edit Shortcuts</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>New Button</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>New Command Box</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Beginning of Line</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>End of Line</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Delete Line</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Beginning of File</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>End of File</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="functionLabel">
+     <property name="text">
+      <string>Function</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
