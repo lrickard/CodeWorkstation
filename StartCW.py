@@ -7,6 +7,9 @@
 import sys
 import time
 import subprocess
+import calendar
+import pickle
+import os.path
 from PyQt5.QtCore import QThread
 from PyQt5.QtCore import QCoreApplication
 from PyQt5 import QtCore, QtGui
@@ -54,14 +57,20 @@ class BoxData:
 
 
 def runBox(bData):
-	tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE)
-	tempProc.wait()
-	bData.output = tempProc.communicate()[0].decode("utf-8")
+	try:
+		tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		tempProc.wait()
+		bData.output = tempProc.communicate()[0].decode("utf-8")
+	except Exception as e:
+		bData.output = str(e)
 
 def runButton(bData):
-	tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE)
-	tempProc.wait()
-	bData.outputLoc.output = tempProc.communicate()[0].decode("utf-8")
+	try:
+		tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE)
+		tempProc.wait()
+		bData.outputLoc.output = tempProc.communicate()[0].decode("utf-8")
+	except Exception as e:
+		bData.outputLoc.output = str(e)
 
 
 class CWErrorDialog(QDialog): # ----------------------------------------------
@@ -180,7 +189,7 @@ class CWButtonDialog(QDialog): # ---------------------------------------------
 			newButton.setObjectName(self.data.name)
 			newButton.setText(self.data.name)
 			newButton.data.buttonObj = newButton
-			window.ui.horizontalLayout.addWidget(newButton)
+			window.ui.buttonDock.addWidget(newButton)
 			butDict[self.data.name] = self.data
 			butList.append(self.data)
 			self.close()
@@ -250,10 +259,9 @@ class CWCommandBoxDialog(QDialog): # -----------------------------------------
 			self.data = bData
 			self.ui.OkayButton.clicked.connect(self.updateSettings)
 			self.ui.NameText.setText(bData.name)
-			print(bData.command)
 			self.ui.CommandText.setText(bData.command)
 			if bData.auto:
-				self.ui.CBAutoUpdate.setTristate(True)
+				self.ui.CBAutoUpdate.setChecked(True)
 			if bData.interval == 1:
 				self.ui.RB1s.toggle()
 			elif bData.interval == 3:
@@ -333,7 +341,7 @@ class CWCommandBoxDialog(QDialog): # -----------------------------------------
 				if self.data.location == "r":
 					window.ui.verticalLayout.removeWidget(self.data.boxObj)
 				elif self.data.location == "b":
-					window.ui.horizontalLayout.removeWidget(self.data.boxObj)
+					window.ui.horizontalLayout_3.removeWidget(self.data.boxObj)
 				if self.data.location != "l":
 					self.data.location = "l"
 					window.ui.verticalLayout_2.addWidget(self.data.boxObj)
@@ -341,17 +349,17 @@ class CWCommandBoxDialog(QDialog): # -----------------------------------------
 				if self.data.location == "r":
 					window.ui.verticalLayout.removeWidget(self.data.boxObj)
 				elif self.data.location == "l":
-					window.ui.verticallayout_2.removeWidget(self.data.boxObj)
+					window.ui.verticalLayout_2.removeWidget(self.data.boxObj)
 				if self.data.location != "b":
-					bData.location = "b"
+					self.data.location = "b"
 					window.ui.horizontalLayout_3.addWidget(self.data.boxObj)
 			else:
 				if self.data.location == "b":
-					window.ui.horizontalLayout.removeWidget(self.data.boxObj)
+					window.ui.horizontalLayout_3.removeWidget(self.data.boxObj)
 				elif self.data.location == "l":
-					window.ui.verticalLayout_2.removeWidget(self.data.boxobj)
+					window.ui.verticalLayout_2.removeWidget(self.data.boxObj)
 				if self.data.location != "r":
-					bData.location = "r"
+					self.data.location = "r"
 					window.ui.verticalLayout.addWidget(self.data.boxObj)
 			self.close()
 
@@ -373,13 +381,28 @@ class CWButton(QPushButton): # -----------------------------------------------
 	def contextMenuEvent(self, event):
 		self.buttonContext = QMenu()
 		self.editAction = QAction('Edit', self)
+		self.deleteAction = QAction('Delete', self)
 		self.editAction.triggered.connect(self.editButton)
+		self.deleteAction.triggered.connect(self.deleteButton)
 		self.buttonContext.addAction(self.editAction)
+		self.buttonContext.addAction(self.deleteAction)
 		self.buttonContext.popup(QCursor.pos())
+	
+	def loadButton(self, but):
+		self.data = but
 
 	def editButton(self):
 		self.newButtonDialog=CWButtonDialog(self.data)
 		self.newButtonDialog.show()
+	
+	def deleteButton(self):
+		for bindex in range(len(butList)):
+			if butList[bindex].name == self.data.name:
+				del butDict[self.data.name]
+				del butList[bindex]				
+		window.ui.buttonDock.removeWidget(self)
+		self.parent = None
+		self.deleteLater()
 # END CWButton ---------------------------------------------------------------
 		
 
@@ -394,13 +417,30 @@ class CWCommandBox(QPlainTextEdit): # ----------------------------------------
 	def contextMenuEvent(self, event):
 		self.boxContext = QMenu()
 		self.editAction = QAction('Edit', self)
+		self.deleteAction = QAction('Delete', self)
+		self.deleteAction.triggered.connect(self.deleteBox)
 		self.editAction.triggered.connect(self.editBox)
 		self.boxContext.addAction(self.editAction)
+		self.boxContext.addAction(self.deleteAction)
 		self.boxContext.popup(QCursor.pos())
+
+	def loadBox(self, box):
+		self.data = box
 
 	def editBox(self):
 		self.editBoxDialog = CWCommandBoxDialog(self.data)
 		self.editBoxDialog.show()
+
+	def deleteBox(self):
+		for bindex in range(len(butList)):
+			if butList[bindex].outputLoc.name == self.data.name:
+				butList[bindex].outputLoc = boxDict["Main Command Box"]
+		for bindex in range(len(boxList)):
+			if boxList[bindex].name == self.data.name:
+				del boxDict[self.data.name]
+				del boxList[bindex]
+			self.parent = None
+			self.deleteLater()
 # END CWCommandBox -----------------------------------------------------------
 
 
@@ -420,6 +460,8 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.ui.actionSave.triggered.connect(self.save)
 		self.ui.actionSave_As.triggered.connect(self.saveAs)
 		self.ui.actionOpen.triggered.connect(self.openFile)
+		self.ui.actionSave_Settings.triggered.connect(self.saveSettings)
+		self.ui.actionLoad_Settings.triggered.connect(self.loadSettings)
 		self.ui.actionBoL.triggered.connect(self.beginningOfLine)
 		self.ui.actionEoL.triggered.connect(self.endOfLine)
 		self.ui.actionDL.triggered.connect(self.deleteLine)
@@ -436,7 +478,8 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 
 	def updateCBoxes(self):
 		for box in boxList:
-			box.boxObj.setPlainText(box.output)
+			if box.boxObj.toPlainText() != box.output:
+				box.boxObj.setPlainText(box.output)
 	
 	def newButton(self):
 		self.newButtonDialog=CWButtonDialog(None)
@@ -504,6 +547,207 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		cursor = self.ui.MainTextBox.textCursor()
 		cursor.movePosition(11)
 		self.ui.MainTextBox.setTextCursor(cursor)
+	
+	def saveSettingsSecret(self):
+		global butList, boxList, butDict, boxDict, shortcutDict
+		butCList = []
+		boxCList = []
+		filename = ".cwrc"
+		for but in butList:
+			butC = ButData()
+			butC.name = but.name
+			butC.command = but.command
+			butC.run = but.run
+			butC.outputName = but.outputLoc.name
+			butCList.append(butC)
+		for box in boxList:
+			boxC = BoxData()
+			boxC.name = box.name
+			boxC.command = box.command
+			boxC.location = box.location
+			boxC.output = box.output
+			boxC.auto = box.auto
+			boxC.interval = box.interval
+			boxC.lastrun = box.lastrun
+			boxCList.append(boxC)
+		with open(os.path.expanduser("~/") + filename, "wb") as f:
+			allObjs = [butCList, boxCList, shortcutDict]
+			pickle.dump(allObjs, f)
+
+	def saveSettings(self):
+		global butList, boxList, butDict, boxDict, shortcutDict
+		butCList = []
+		boxCList = []
+		filename = QFileDialog.getSaveFileName(self, 'Save File', '.')
+		for but in butList:
+			butC = ButData()
+			butC.name = but.name
+			butC.command = but.command
+			butC.run = but.run
+			butC.outputName = but.outputLoc.name
+			butCList.append(butC)
+		for box in boxList:
+			boxC = BoxData()
+			boxC.name = box.name
+			boxC.command = box.command
+			boxC.location = box.location
+			boxC.output = box.output
+			boxC.auto = box.auto
+			boxC.interval = box.interval
+			boxC.lastrun = box.lastrun
+			boxCList.append(boxC)
+		with open(filename[0], "wb") as f:
+			allObjs = [butCList, boxCList, shortcutDict]
+			pickle.dump(allObjs, f)
+	
+	def loadSettingsSecret(self):
+		global butList, boxList, butDict, boxDict, shortcutDict
+		filename = ".cwrc"
+		if os.path.isfile(os.path.expanduser("~/") + filename):
+			with open(os.path.expanduser("~/") + filename, "rb") as f:
+				allObjs = pickle.load(f)
+			butCList = allObjs[0]
+			boxCList = allObjs[1]
+			shorcutDict = allObjs[2]
+			for boxC in boxCList:
+				if boxC.name != "Main Command Box":
+					box = BoxData()
+					box.name = boxC.name
+					box.command = boxC.command
+					box.location = boxC.location
+					box.output = boxC.output
+					box.auto = boxC.auto
+					box.interval = boxC.interval
+					box.lastrun = boxC.lastrun
+					boxOb = CWCommandBox(box)
+					boxOb.loadBox(box)
+					boxOb.setObjectName(box.name)
+					box.boxObj = boxOb
+					boxDict[box.name] = box 
+					boxList.append(box)
+					if box.location == "l": 
+						window.ui.verticalLayout_2.addWidget(boxOb)
+					elif box.location == "b":
+						window.ui.horizontalLayout_3.addWidget(boxOb)
+					else:
+						window.ui.verticalLayout.addWidget(boxOb)
+
+			for butC in butCList:
+				but = ButData()
+				but.name = butC.name
+				but.command = butC.command
+				but.run = butC.run
+				butOb = CWButton()
+				butOb.loadButton(but)
+				butOb.setObjectName(but.name)
+				butOb.setText(but.name)
+				but.buttonObj = butOb
+				but.outputLoc = boxDict[butC.outputName]
+				butDict[but.name] = but
+				butList.append(but)
+				window.ui.buttonDock.addWidget(butOb)
+
+			for key in shortcutDict.keys():
+				fn = shortcutDict[key]
+				seq = QKeySequence("Ctrl+" + key)
+				if fn == "Save":
+					window.ui.actionSave.setShortcut(seq)
+				elif fn == "Save As":
+					window.ui.actionSave_As.setShortcut(seq)
+				elif fn == "Open":
+					window.ui.actionOpen.setShortcut(seq)
+				elif fn == "Edit Shortcuts":
+					window.ui.actionShortcuts.setShortcut(seq)
+				elif fn == "New Button":
+					window.ui.actionButton.setShortcut(seq)
+				elif fn == "New Command Box":
+					window.ui.actionCommand_Window.setShortcut(seq)
+				elif fn == "Beginning of Line":
+					window.ui.actionBoL.setShortcut(seq)
+				elif fn == "End of Line":
+					window.ui.actionEoL.setShortcut(seq)
+				elif fn == "Delete Line":
+					window.ui.actionDL.setShortcut(seq)
+				elif fn == "Beginning of File":
+					window.ui.actionBoF.setShortcut(seq)
+				elif fn == "End of File":
+					window.ui.actionEoF.setShortcut(seq)
+				else:
+					butDict[fn].buttonObj.setShortcut(seq)
+
+	def loadSettings(self):
+		global butList, boxList, butDict, boxDict, shortcutDict
+		filename = QFileDialog.getOpenFileName(self, 'Open File', '.')
+		with open(filename[0], "rb") as f:
+			allObjs = pickle.load(f)
+		butCList = allObjs[0]
+		boxCList = allObjs[1]
+		shorcutDict = allObjs[2]
+		for boxC in boxCList:
+			if boxC.name != "Main Command Box":
+				box = BoxData()
+				box.name = boxC.name
+				box.command = boxC.command
+				box.location = boxC.location
+				box.output = boxC.output
+				box.auto = boxC.auto
+				box.interval = boxC.interval
+				box.lastrun = boxC.lastrun
+				boxOb = CWCommandBox(box)
+				boxOb.loadBox(box)
+				boxOb.setObjectName(box.name)
+				box.boxObj = boxOb
+				boxDict[box.name] = box 
+				boxList.append(box)
+				if box.location == "l": 
+					window.ui.verticalLayout_2.addWidget(boxOb)
+				elif box.location == "b":
+					window.ui.horizontalLayout_3.addWidget(boxOb)
+				else:
+					window.ui.verticalLayout.addWidget(boxOb)
+
+		for butC in butCList:
+			but = ButData()
+			but.name = butC.name
+			but.command = butC.command
+			but.run = butC.run
+			butOb = CWButton()
+			butOb.loadButton(but)
+			butOb.setObjectName(but.name)
+			butOb.setText(but.name)
+			but.buttonObj = butOb
+			but.outputLoc = boxDict[butC.outputName]
+			butDict[but.name] = but
+			butList.append(but)
+			window.ui.buttonDock.addWidget(butOb)
+
+		for key in shortcutDict.keys():
+			fn = shortcutDict[key]
+			seq = QKeySequence("Ctrl+" + key)
+			if fn == "Save":
+				window.ui.actionSave.setShortcut(seq)
+			elif fn == "Save As":
+				window.ui.actionSave_As.setShortcut(seq)
+			elif fn == "Open":
+				window.ui.actionOpen.setShortcut(seq)
+			elif fn == "Edit Shortcuts":
+				window.ui.actionShortcuts.setShortcut(seq)
+			elif fn == "New Button":
+				window.ui.actionButton.setShortcut(seq)
+			elif fn == "New Command Box":
+				window.ui.actionCommand_Window.setShortcut(seq)
+			elif fn == "Beginning of Line":
+				window.ui.actionBoL.setShortcut(seq)
+			elif fn == "End of Line":
+				window.ui.actionEoL.setShortcut(seq)
+			elif fn == "Delete Line":
+				window.ui.actionDL.setShortcut(seq)
+			elif fn == "Beginning of File":
+				window.ui.actionBoF.setShortcut(seq)
+			elif fn == "End of File":
+				window.ui.actionEoF.setShortcut(seq)
+			else:
+				butDict[fn].buttonObj.setShortcut(seq)
 
 	def closeEvent(self, event):
 		global yesRun
@@ -511,7 +755,8 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		yesRun = False
 		del self.newButtonDialog
 		del self.newCommandDialog
-
+		self.saveSettingsSecret()
+		
 	def _close_(self):
 		print("CWWindow being forcibly closed")
 		# Functions you place here will not run when the window closes
@@ -548,7 +793,9 @@ class mainThread(QtCore.QThread): # ------------------------------------------
 		while yesRun:
 			if len(boxList) != 0:
 				if boxList[index].auto:
-					runBox(boxList[index])
+					if (calendar.timegm(time.gmtime()) - boxList[index].lastrun) >= boxList[index].interval:
+						runBox(boxList[index])
+						boxList[index].lastrun = calendar.timegm(time.gmtime())
 				for btn in butList:
 					if btn.run == True:
 						runButton(btn)
@@ -564,6 +811,7 @@ def main():
 	global window
 	app = QApplication(sys.argv)
 	window = CWWindow()
+	window.loadSettingsSecret()
 	window.showMaximized()
 	mainT = mainThread()
 	mainT.start()
