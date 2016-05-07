@@ -16,7 +16,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
-from CommandBoxDialogUI import Ui_CommandWindowDialog
+from CommandBoxDialogUI import Ui_CommandBoxDialog
 from MainWindowUI import Ui_MainWindow
 from ButtonDialogUI import Ui_ButtonDialog
 from CommandBoxChoiceDialogUI import Ui_CommandBoxChoiceDialog
@@ -58,17 +58,13 @@ class BoxData:
 
 def runBox(bData):
 	try:
-		tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		tempProc.wait()
-		bData.output = tempProc.communicate()[0].decode("utf-8")
+		bData.output = subprocess.check_output(bData.command, stderr=subprocess.STDOUT, shell=True).decode("utf-8")
 	except Exception as e:
 		bData.output = str(e)
 
 def runButton(bData):
 	try:
-		tempProc = subprocess.Popen(bData.command.split(), stdout=subprocess.PIPE)
-		tempProc.wait()
-		bData.outputLoc.output = tempProc.communicate()[0].decode("utf-8")
+		bData.outputLoc.output = subprocess.check_output(bData.command, stderr=subprocess.STDOUT, shell=True).decode("utf-8")
 	except Exception as e:
 		bData.outputLoc.output = str(e)
 
@@ -109,23 +105,29 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 		elif len(key) > 1:
 			self.errorPopup = CWErrorDialog("Error: Please use only one character.")
 			self.errorPopup.show()
-		elif key in shortcutDict.keys():
-			self.errorPopup = CWErrorDialog("This key is already being used.")
-			self.errorPopup.show()
 		else:
+			isIn = False
 			fn = self.ui.functionDropdown.currentText()
 			if fn in shortcutDict.values():
 				for k in shortcutDict.keys():
-					if fn == shortcutDict[k] and k != key:
-						del shortcutDict[k]
-						break
+					if fn == shortcutDict[k]:
+						isIn = True
+						if k != key: 
+							del shortcutDict[k]
+							break
 			k = QTableWidgetItem("Ctrl + " + key)
 			f = QTableWidgetItem(fn)
 			shortcutDict[key] = fn
 			self.ui.shortcutTable.setRowCount(len(shortcutDict.keys()))
 			pos = len(shortcutDict.keys()) - 1
-			self.ui.shortcutTable.setItem(pos, 0, k)
-			self.ui.shortcutTable.setItem(pos, 1, f)
+			if not isIn:
+				self.ui.shortcutTable.setItem(pos, 0, k)
+				self.ui.shortcutTable.setItem(pos, 1, f)
+			else:
+				for i in range(pos+1):
+					if self.ui.shortcutTable.item(i, 1).text() == f.text():
+						self.ui.shortcutTable.setItem(i, 0, k)
+						break
 			seq = QKeySequence("Ctrl+" + key)
 			if fn == "Save":
 				window.ui.actionSave.setShortcut(seq)
@@ -138,7 +140,7 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 			elif fn == "New Button":
 				window.ui.actionButton.setShortcut(seq)
 			elif fn == "New Command Box":
-				window.ui.actionCommand_Window.setShortcut(seq)
+				window.ui.actionCommand_Box.setShortcut(seq)
 			elif fn == "Beginning of Line":
 				window.ui.actionBoL.setShortcut(seq)
 			elif fn == "End of Line":
@@ -150,8 +152,17 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 			elif fn == "End of File":
 				window.ui.actionEoF.setShortcut(seq)
 			else:
-				butDict[fn].buttonObj.setShortcut(seq)
+				act = QAction(window)
+				act.setText(fn)
+				act.triggered.connect(butDict[fn].buttonObj.click)
+				act.setShortcut(seq)
+				window.ui.menuCommands.addAction(act)
+
 			self.ui.keyEntry.setText("")
+
+	def closeEvent(self, event):
+		if self.ui.keyEntry.text() != "":
+			self.saveShortcut()
 # END CWShortcutDialog ------------------------------------------------------
 
 
@@ -249,7 +260,7 @@ class CWCommandBoxChoiceDialog(QDialog): # -----------------------------------
 class CWCommandBoxDialog(QDialog): # -----------------------------------------
 	def __init__(self, bData, parent=None, name=None):
 		super(CWCommandBoxDialog, self).__init__(parent) #Formality
-		self.ui = Ui_CommandWindowDialog()
+		self.ui = Ui_CommandBoxDialog()
 		self.ui.setupUi(self)
 		self.ui.CancelButton.clicked.connect(self.selfDestruct)
 		if bData == None:
@@ -273,7 +284,7 @@ class CWCommandBoxDialog(QDialog): # -----------------------------------------
 			if bData.location == 'l':
 				self.ui.RBLeft.toggle()
 			elif bData.location == 'r':
-			 	self.ui.RBRight.toggle()
+				self.ui.RBRight.toggle()
 			else:
 				self.ui.RBBottom.toggle()
 	
@@ -400,7 +411,18 @@ class CWButton(QPushButton): # -----------------------------------------------
 			if butList[bindex].name == self.data.name:
 				del butDict[self.data.name]
 				del butList[bindex]				
+				break
 		window.ui.buttonDock.removeWidget(self)
+		for key in shortcutDict.keys():
+			if shortcutDict[key] == self.data.name:
+				del shortcutDict[key]
+				break
+		for act in window.ui.menuCommands.actions():
+			print(act.text())
+			print(self.data.name)
+			if act.text() == self.data.name:
+				window.ui.menuCommands.removeAction(act)
+				break
 		self.parent = None
 		self.deleteLater()
 # END CWButton ---------------------------------------------------------------
@@ -454,7 +476,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.ui = Ui_MainWindow()
 		self.ui.setupUi(self)
 		self.ui.actionButton.triggered.connect(self.newButton)
-		self.ui.actionCommand_Window.triggered.connect(self.newCommandWindow)
+		self.ui.actionCommand_Box.triggered.connect(self.newCommandBox)
 		self.ui.actionShortcuts.triggered.connect(self.newShortcut)
 		self.ui.NewButtonButton.clicked.connect(self.newButton)
 		self.ui.actionSave.triggered.connect(self.save)
@@ -485,7 +507,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.newButtonDialog=CWButtonDialog(None)
 		self.newButtonDialog.show()
 
-	def newCommandWindow(self):
+	def newCommandBox(self):
 		self.newCommandDialog=CWCommandBoxDialog(None)
 		self.newCommandDialog.show()
 
@@ -671,7 +693,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 				elif fn == "New Button":
 					window.ui.actionButton.setShortcut(seq)
 				elif fn == "New Command Box":
-					window.ui.actionCommand_Window.setShortcut(seq)
+					window.ui.actionCommand_Box.setShortcut(seq)
 				elif fn == "Beginning of Line":
 					window.ui.actionBoL.setShortcut(seq)
 				elif fn == "End of Line":
@@ -683,7 +705,11 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 				elif fn == "End of File":
 					window.ui.actionEoF.setShortcut(seq)
 				else:
-					butDict[fn].buttonObj.setShortcut(seq)
+					act = QAction(window)
+					act.setText(fn)
+					act.triggered.connect(butDict[fn].buttonObj.click)
+					act.setShortcut(seq)
+					window.ui.menuCommands.addAction(act)
 
 	def loadSettings(self):
 		global butList, boxList, butDict, boxDict, shortcutDict
@@ -747,7 +773,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			elif fn == "New Button":
 				window.ui.actionButton.setShortcut(seq)
 			elif fn == "New Command Box":
-				window.ui.actionCommand_Window.setShortcut(seq)
+				window.ui.actionCommand_Box.setShortcut(seq)
 			elif fn == "Beginning of Line":
 				window.ui.actionBoL.setShortcut(seq)
 			elif fn == "End of Line":
@@ -759,7 +785,11 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			elif fn == "End of File":
 				window.ui.actionEoF.setShortcut(seq)
 			else:
-				butDict[fn].buttonObj.setShortcut(seq)
+				act = QAction(window)
+				act.setText(fn)
+				act.triggered.connect(butDict[fn].buttonObj.click)
+				act.setShortcut(seq)
+				window.ui.menuCommands.addAction(act)
 
 	def closeEvent(self, event):
 		global yesRun
@@ -810,7 +840,7 @@ class mainThread(QtCore.QThread): # ------------------------------------------
 						boxList[index].lastrun = calendar.timegm(time.gmtime())
 				for btn in butList:
 					if btn.run == True:
-						runButton(btn)
+						runButton(btn) # TODO Run these Async with thread and check performance
 						btn.run = False
 				index = (index + 1) % len(boxList)
 			if index == 0:
