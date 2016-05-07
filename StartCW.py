@@ -552,6 +552,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		global butList, boxList, butDict, boxDict, shortcutDict
 		butCList = []
 		boxCList = []
+		shortcutCList = []
 		filename = ".cwrc"
 		for but in butList:
 			butC = ButData()
@@ -570,14 +571,18 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			boxC.interval = box.interval
 			boxC.lastrun = box.lastrun
 			boxCList.append(boxC)
+		for key in shortcutDict.keys():
+			shortcut = [key, shortcutDict[key]]
+			shortcutCList.append(shortcut)
 		with open(os.path.expanduser("~/") + filename, "wb") as f:
-			allObjs = [butCList, boxCList, shortcutDict]
+			allObjs = [butCList, boxCList, shortcutCList]
 			pickle.dump(allObjs, f)
 
 	def saveSettings(self):
 		global butList, boxList, butDict, boxDict, shortcutDict
 		butCList = []
 		boxCList = []
+		shortcutCList = []
 		filename = QFileDialog.getSaveFileName(self, 'Save File', '.')
 		for but in butList:
 			butC = ButData()
@@ -596,8 +601,11 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			boxC.interval = box.interval
 			boxC.lastrun = box.lastrun
 			boxCList.append(boxC)
+		for key in shortcutDict.keys():
+			shortcut = [key, shortcutDict[key]]
+			shortcutCList.append(shortcut)
 		with open(filename[0], "wb") as f:
-			allObjs = [butCList, boxCList, shortcutDict]
+			allObjs = [butCList, boxCList, shortcutCList]
 			pickle.dump(allObjs, f)
 	
 	def loadSettingsSecret(self):
@@ -608,7 +616,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 				allObjs = pickle.load(f)
 			butCList = allObjs[0]
 			boxCList = allObjs[1]
-			shorcutDict = allObjs[2]
+			shortcutCList= allObjs[2]
 			for boxC in boxCList:
 				if boxC.name != "Main Command Box":
 					box = BoxData()
@@ -647,8 +655,10 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 				butList.append(but)
 				window.ui.buttonDock.addWidget(butOb)
 
-			for key in shortcutDict.keys():
-				fn = shortcutDict[key]
+			for shortcut in shortcutCList:
+				key = shortcut[0]
+				fn = shortcut[1]
+				shortcutDict[key] = fn
 				seq = QKeySequence("Ctrl+" + key)
 				if fn == "Save":
 					window.ui.actionSave.setShortcut(seq)
@@ -682,7 +692,7 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			allObjs = pickle.load(f)
 		butCList = allObjs[0]
 		boxCList = allObjs[1]
-		shorcutDict = allObjs[2]
+		shortcutCList= allObjs[2]
 		for boxC in boxCList:
 			if boxC.name != "Main Command Box":
 				box = BoxData()
@@ -721,8 +731,10 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 			butList.append(but)
 			window.ui.buttonDock.addWidget(butOb)
 
-		for key in shortcutDict.keys():
-			fn = shortcutDict[key]
+		for shortcut in shortcutCList:
+			key = shortcut[0]
+			fn = shortcut[1]
+			shortcutDict[key] = fn
 			seq = QKeySequence("Ctrl+" + key)
 			if fn == "Save":
 				window.ui.actionSave.setShortcut(seq)
