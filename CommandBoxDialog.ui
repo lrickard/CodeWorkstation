@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>CommandWindowDialog</class>
- <widget class="QDialog" name="CommandWindowDialog">
+ <class>CommandBoxDialog</class>
+ <widget class="QDialog" name="CommandBoxDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -51,7 +51,11 @@
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QLineEdit" name="NameText"/>
+      <widget class="QLineEdit" name="NameText">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

@@ -91,16 +91,19 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 			self.ui.functionDropdown.addItem(but.name)
 
 		for i, key in enumerate(shortcutDict.keys()):
-			k = QTableWidgetItem("Ctrl+ " + key)
+			k = QTableWidgetItem("Ctrl+" + key)
 			fn = QTableWidgetItem(shortcutDict[key])
 			self.ui.shortcutTable.setItem(i, 0, k)
 			self.ui.shortcutTable.setItem(i, 1, fn)
 
 	def saveShortcut(self):
 		global shortcutDict, window
-		key = self.ui.keyEntry.text()
-		if key == "":
-			self.errorPopup = CWErrorDialog("Error: All fields must have appropriate values.")
+		key = self.ui.keyEntry.text().lower()
+		if key == "a" or key == "u" or key == "c" or key == "v" or key == "z" or key == "x":
+			self.errorPopup = CWErrorDialog("Error: the '" + key + "' key is reserved for OS text editing functions")
+			self.errorPopup.show()
+		elif key == "":
+			self.errorPopup = CWErrorDialog("Error: Please enter a key")
 			self.errorPopup.show()
 		elif len(key) > 1:
 			self.errorPopup = CWErrorDialog("Error: Please use only one character.")
@@ -115,7 +118,19 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 						if k != key: 
 							del shortcutDict[k]
 							break
-			k = QTableWidgetItem("Ctrl + " + key)
+				for act in window.ui.menuCommands.actions():
+					if act.text() == fn:
+						window.ui.menuCommands.removeAction(act)
+						break
+			for x in shortcutDict.keys():
+				if x == key:
+					for y in range(len(shortcutDict.keys())):
+						if self.ui.shortcutTable.item(y, 0).text() ==  "Ctrl+" + key:
+							self.ui.shortcutTable.removeRow(y)
+							break
+					del shortcutDict[x]
+					break
+			k = QTableWidgetItem("Ctrl+" + key)
 			f = QTableWidgetItem(fn)
 			shortcutDict[key] = fn
 			self.ui.shortcutTable.setRowCount(len(shortcutDict.keys()))
@@ -128,6 +143,7 @@ class CWShortcutDialog(QDialog): # -------------------------------------------
 					if self.ui.shortcutTable.item(i, 1).text() == f.text():
 						self.ui.shortcutTable.setItem(i, 0, k)
 						break
+
 			seq = QKeySequence("Ctrl+" + key)
 			if fn == "Save":
 				window.ui.actionSave.setShortcut(seq)
@@ -187,7 +203,7 @@ class CWButtonDialog(QDialog): # ---------------------------------------------
 		self.data = butData
 
 	def saveSettings(self):
-		global buttonData
+		global butList, butDict
 		if self.ui.nameText.text() == "" or self.ui.commandText.text() == "":
 			self.errorPopup = CWErrorDialog("Error: All fields must have appropriate values.")
 			self.errorPopup.show()
@@ -206,16 +222,51 @@ class CWButtonDialog(QDialog): # ---------------------------------------------
 			self.close()
 
 	def updateSettings(self):
-		self.data.command = self.ui.commandText.text()
-		self.data.outputLoc = boxDict[self.ui.outputText.text()]
-		self.data.buttonObj.setText = self.ui.nameText.text()
-		self.data.name = self.ui.nameText.text()
-		if self.data.command == "":
+		global butDict, butList
+		if butDict.get(self.ui.nameText.text()) != None and self.data.name != self.ui.nameText.text():
+			self.errorPopup = CWErrorDialog("Error: Another button has this name")
+			self.errorPopup.show()
+		elif self.ui.commandText.text() == "":
 			self.errorPopup = CWErrorDialog("Error: Cannot have a button without a command.")
 			self.errorPopup.show()
-		else:
-			self.data.outputLoc = boxDict[self.ui.outputText.text()]
+		elif boxDict.get(self.ui.outputText.text()) == None:
+			self.errorPopup = CWErrorDialog("Error: Not a valid command box")
+			self.errorPopup.show()
+		else:	
 			self.close()
+			# Saving the name for later removal of the shortcut
+			oldname = self.data.name
+			oldButtonObj = self.data.buttonObj
+			# Removing the old button data
+			for x in range(len(butList)):
+				if butList[x].name == oldname:
+					del butList[x]
+					break
+			del butDict[oldname]
+			# Creating new button data
+			newData = ButData()
+			newData.name = self.ui.nameText.text()
+			newData.command = self.ui.commandText.text()
+			newData.outputLoc = boxDict[self.ui.outputText.text()]
+			newData.buttonObj = oldButtonObj
+			butList.append(newData)
+			butDict[newData.name] = newData
+			newData.buttonObj.setText(newData.name)
+			# Attaching the data to the Button
+			newData.buttonObj.data = newData
+			# Changing the shortuct
+			for key in shortcutDict.keys():
+				if shortcutDict[key] == oldname:
+					del shortcutDict[key]
+					shortcutDict[key] = newData.name
+					break
+			for act in window.ui.menuCommands.actions():
+				if act.text() == oldname:
+					act.setText(newData.name)
+					break
+
+
+
 
 	def openCommandBoxChoiceDialog(self):
 		self.newCommBoxChoiceDialog = CWCommandBoxChoiceDialog(self)
@@ -297,6 +348,10 @@ class CWCommandBoxDialog(QDialog): # -----------------------------------------
 			self.errorPopup = CWErrorDialog("Error: All fields must have appropriate values.")
 			self.errorPopup.show()
 			return False
+		if self.ui.NameText.text() == "":
+		 	self.errorPopup = CWErrorDialog("Please enter a name.")
+		 	self.errorPopup.show()
+		 	return False
 		return True
 
 	def saveSettings(self):
@@ -404,6 +459,7 @@ class CWButton(QPushButton): # -----------------------------------------------
 
 	def editButton(self):
 		self.newButtonDialog=CWButtonDialog(self.data)
+		self.newButtonDialog.updateSettings()
 		self.newButtonDialog.show()
 	
 	def deleteButton(self):
@@ -418,8 +474,6 @@ class CWButton(QPushButton): # -----------------------------------------------
 				del shortcutDict[key]
 				break
 		for act in window.ui.menuCommands.actions():
-			print(act.text())
-			print(self.data.name)
 			if act.text() == self.data.name:
 				window.ui.menuCommands.removeAction(act)
 				break
@@ -492,11 +546,11 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		self.newButtonDialog = None
 		self.newCommandDialog = None
 		self.updateSignal.connect(self.updateCBoxes)
-		mainBoxData = BoxData()
-		mainBoxData.name = "Main Command Box"
-		mainBoxData.boxObj = self.ui.MainCommandBox
-		boxDict["Main Command Box"] = mainBoxData
-		boxList.append(mainBoxData)
+		self.mainBoxData = BoxData()
+		self.mainBoxData.name = "Main Command Box"
+		self.mainBoxData.boxObj = self.ui.MainCommandBox
+		boxDict["Main Command Box"] = self.mainBoxData
+		boxList.append(self.mainBoxData)
 
 	def updateCBoxes(self):
 		for box in boxList:
@@ -719,6 +773,26 @@ class CWWindow(QMainWindow): # -----------------------------------------------
 		butCList = allObjs[0]
 		boxCList = allObjs[1]
 		shortcutCList= allObjs[2]
+		for but in butList:
+			window.ui.buttonDock.removeWidget(but.buttonObj)
+			for act in window.ui.menuCommands.actions():
+				if act.text() == but.name:
+					window.ui.menuCommands.removeAction(act)
+					break
+			but.buttonObj.parent = None
+			but.buttonObj.deleteLater()
+		for box in boxList:
+			if box.name != "Main Command Box":
+				box.boxObj.deleteBox()
+		butList = []
+		butDict = {}
+		boxList = []
+		boxDict = {}
+		shortcutDict = {}
+		boxDict["Main Command Box"] = window.mainBoxData
+		boxList.append(window.mainBoxData)
+#for key in shortcutDict.keys():
+#			del shortcutDict[key]
 		for boxC in boxCList:
 			if boxC.name != "Main Command Box":
 				box = BoxData()
