@@ -1,0 +1,6 @@
+1) Allow Code Workstation to be run with an arguement that will allow launch with minimal features like -m
+   (This should exclude the text editor and the default command box)
+    - This will require the default command box to become optional
+       - Buttons will default to outputting to the first available command box
+       - Buttons must check if there is an available box to output to
+    - Save, open, and Save As all need to check if there is a text box existing
